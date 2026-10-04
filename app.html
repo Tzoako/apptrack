@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spidey Tracker</title>
+<style>
+:root{--bg:#f3eef0;--map:#e4dde0;--street:#fbf8f9;--park:#cfe0c6;--water:#bcd3e6;--ink:#1b1f3b;--soft:#5d6080;--red:#d3202f;--blue:#1d3a8a;--card:#fff;--line:#c9c1c6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10122a;--map:#1a1d3d;--street:#2a2e58;--park:#1f3a33;--water:#173a5c;--ink:#eef0ff;--soft:#a3a8d6;--red:#ff4757;--blue:#7d9bff;--card:#181b3a;--line:#33376b}}
+:root[data-theme="dark"]{--bg:#10122a;--map:#1a1d3d;--street:#2a2e58;--park:#1f3a33;--water:#173a5c;--ink:#eef0ff;--soft:#a3a8d6;--red:#ff4757;--blue:#7d9bff;--card:#181b3a;--line:#33376b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{max-width:1100px;margin:0 auto;padding:20px 20px 8px}
+h1{margin:0;font:800 2rem/1.05 "Arial Black",Impact,system-ui,sans-serif;color:var(--red);letter-spacing:-.02em}
+header p{margin:6px 0 0;color:var(--soft);max-width:60ch}
+main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:16px;max-width:1100px;margin:0 auto;padding:12px 20px 28px}
+@media(max-width:760px){main{grid-template-columns:1fr}}
+.map{background:var(--map);border:2px solid var(--ink);border-radius:8px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto}
+.panel{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--card);border:2px solid var(--ink);border-radius:8px;padding:14px 16px}
+.name{margin:0;font:800 1.2rem system-ui,sans-serif}
+.state{display:flex;align-items:center;gap:8px;color:var(--soft)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red)}
+.paused .dot{background:var(--soft)}
+.consent{display:flex;gap:8px;align-items:flex-start;font-size:.9rem;color:var(--soft);margin-top:8px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+dt{color:var(--soft)}dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+h2{margin:0 0 8px;font:800 1rem system-ui,sans-serif}
+ol{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto}
+li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+li:last-child{border:0}
+button{font:inherit;font-weight:700;border:2px solid var(--ink);background:var(--red);color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer;min-height:44px}
+button:hover{background:var(--blue)}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.note{font-size:.85rem;color:var(--soft);margin:0}
+.web{transform-box:fill-box;transform-origin:center;animation:p 2.4s ease-out infinite}
+@keyframes p{from{transform:scale(.5);opacity:.9}to{transform:scale(2.4);opacity:0}}
+.paused .web{animation:none;opacity:.25}
+@media(prefers-reduced-motion:reduce){.web{animation:none;opacity:.35}}
+</style>
+</head>
+<body>
+<header>
+<h1>Spidey Tracker</h1>
+<p>Ubicación en vivo de una persona que decidió compartirla contigo.</p>
+</header>
+<main>
+<div class="map">
+<svg viewBox="0 0 800 520" role="img" aria-label="Mapa esquemático con la posición y el recorrido de la persona">
+<rect width="800" height="520" fill="var(--map)"/>
+<path d="M0 430 Q200 380 400 440 T800 410 L800 520 L0 520 Z" fill="var(--water)"/>
+<rect x="520" y="70" width="170" height="130" rx="6" fill="var(--park)"/>
+<g stroke="var(--street)" stroke-width="12" fill="none" stroke-linecap="round">
+<path d="M0 90H800M0 210H800M0 330H800"/>
+<path d="M130 0V430M300 0V420M470 0V430M640 0V410"/>
+<path d="M0 480L800 20" stroke-width="9"/>
+</g>
+<polyline id="trk" fill="none" stroke="var(--blue)" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+<g id="me">
+<g class="web" stroke="var(--red)" stroke-width="1.5" fill="none">
+<circle r="16"/><circle r="9"/>
+<path d="M0-22V22M-22 0H22M-16-16L16 16M16-16L-16 16"/>
+</g>
+<circle r="9" fill="var(--red)" stroke="var(--ink)" stroke-width="3"/>
+</g>
+</svg>
+</div>
+<div class="panel" id="panel">
+<div class="box">
+<p class="name">Ana</p>
+<div class="state"><span class="dot"></span><span id="st">Compartiendo ubicación</span></div>
+<div class="consent"><span aria-hidden="true">🕸️</span><span>Ana activó este seguimiento y puede pausarlo cuando quiera.</span></div>
+</div>
+<div class="box">
+<dl>
+<dt>Último avistamiento</dt><dd id="ago">hace 0 s</dd>
+<dt>Latitud</dt><dd id="lat">—</dd>
+<dt>Longitud</dt><dd id="lon">—</dd>
+<dt>Velocidad</dt><dd id="spd">—</dd>
+<dt>Batería del teléfono</dt><dd id="bat">—</dd>
+</dl>
+</div>
+<div class="box"><h2>Últimos avistamientos</h2><ol id="log"></ol></div>
+<button id="btn" type="button">Simular pausa de Ana</button>
+<p class="note">Datos simulados y mapa esquemático. En la versión real, la posición llega de la ubicación en tiempo real que Ana comparte desde su teléfono.</p>
+</div>
+</main>
+<script>
+(function(){
+var route=[[60,480],[130,430],[130,330],[300,330],[300,210],[470,210],[470,90],[640,90],[640,210],[740,210]];
+var seg=0,f=0,bat=82,t0=Date.now(),log=[],n=0,paused=false;
+var trk=document.getElementById('trk'),me=document.getElementById('me');
+function pad(v){return (v<10?'0':'')+v}
+function pos(){var a=route[seg],b=route[seg+1];return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]}
+function coords(p){return [40.7128+(260-p[1])*0.00045,-74.006+(p[0]-400)*0.00045]}
+function dm(v,p,m){var a=Math.abs(v),d=Math.floor(a);return d+'° '+((a-d)*60).toFixed(2)+"' "+(v>=0?p:m)}
+var pts=[pos()];
+function draw(){
+ var p=pos(),c=coords(p);
+ me.setAttribute('transform','translate('+p[0].toFixed(1)+','+p[1].toFixed(1)+')');
+ trk.setAttribute('points',pts.concat([p]).map(function(q){return q[0].toFixed(1)+','+q[1].toFixed(1)}).join(' '));
+ document.getElementById('lat').textContent=dm(c[0],'N','S');
+ document.getElementById('lon').textContent=dm(c[1],'E','O');
+ document.getElementById('bat').textContent=Math.round(bat)+'%';
+}
+function ping(){
+ if(paused)return;
+ f+=0.35;
+ if(f>=1){f=0;seg++;if(seg>=route.length-1){seg=0;pts=[]}pts.push(route[seg])}
+ bat=Math.max(5,bat-0.3);
+ var sp=(4+Math.random()*2).toFixed(1);
+ var vt=new Date(Date.UTC(2026,9,4,15,0)+n*2*60000);n++;
+ var c=coords(pos());
+ log.unshift({t:pad(vt.getUTCHours())+':'+pad(vt.getUTCMinutes()),la:dm(c[0],'N','S'),sp:sp});
+ if(log.length>30)log.pop();
+ document.getElementById('spd').textContent=sp+' km/h';
+ document.getElementById('log').innerHTML=log.slice(0,6).map(function(l){return '<li><span>'+l.t+'</span><span>'+l.la+'</span><span>'+l.sp+' km/h</span></li>'}).join('');
+ t0=Date.now();draw();
+}
+setInterval(function(){if(!paused)document.getElementById('ago').textContent='hace '+Math.round((Date.now()-t0)/1000)+' s'},1000);
+setInterval(ping,4000);
+ping();
+var panel=document.getElementById('panel'),btn=document.getElementById('btn');
+btn.addEventListener('click',function(){
+ paused=!paused;panel.classList.toggle('paused',paused);
+ document.getElementById('st').textContent=paused?'Ana pausó el seguimiento':'Compartiendo ubicación';
+ btn.textContent=paused?'Simular que Ana reanuda':'Simular pausa de Ana';
+ if(paused)document.getElementById('ago').textContent='pausado';
+});
+})();
+</script>
+</body>
+</html>
